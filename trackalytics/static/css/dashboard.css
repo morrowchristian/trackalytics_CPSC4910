@@ -1,12 +1,4 @@
-/*
-This sheet contains the CSS shell for the coding.
-(1) Use this as the base line.
-(2) When creating a new html file where we need to create the CSS style.
- - We'll need to copy and paste this coding to a new sheet and use that.
-    - This came after the css file grew larger and was hard to keep up with.
- */
-
-/* ------CSS Root------ */
+/* ------trackalytics/static/css/dashboard.css------ */
 :root {
     --primary-color: #1E1E2D;
     --secondary-color: #4A4A62;
@@ -35,29 +27,30 @@ This sheet contains the CSS shell for the coding.
 
     --sidebar-width: 250px;
 }
+
 /*=============MAIN=============*/
 .menu {
     display: flex;
-    justify-content: space-between; /* Ensures the close button and logo are spaced properly */
+    justify-content: space-between;
     align-items: center;
     padding: 10px;
 }
 
 .logo {
     display: flex;
-    flex-direction: column; /* Stack items vertically */
-    align-items: center; /* Center align */
-    text-align: center; /* Ensure text is centered */
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
 }
 
 .logo img {
-    max-width: 100px; /*size of image*/
+    max-width: 100px;
     height: auto;
 }
 
 .logo h2 {
     font-size: 18px;
-    margin-top: 5px; /* Add spacing between image and text */
+    margin-top: 5px;
 }
 
 * {
@@ -70,11 +63,12 @@ This sheet contains the CSS shell for the coding.
     list-style: none;
     box-sizing: border-box;
 }
-html{
+
+html {
     font-size: 14px;
 }
 
-body{
+body {
     width: 100vw;
     height: 100vh;
     font-family: 'Poppins', sans-serif;
@@ -89,6 +83,7 @@ body{
     font-size: 12px;
     margin-top: -25px;
 }
+
 .card {
     background: var(--card-background-color);
     border-radius: var(--border-radius);
@@ -107,12 +102,11 @@ body{
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 1px;
-    color: var(--secondary-color); /* Darker contrast */
+    color: var(--secondary-color);
     margin-bottom: 5px;
     margin-left: 10px;
 }
 
-/* Sidebar Links with Icons */
 .sidebar a {
     font-family: 'Poppins', sans-serif;
     font-size: 12px;
@@ -128,7 +122,6 @@ body{
     transition: all 0.3s ease-in-out;
 }
 
-/* Sidebar Link Text */
 .sidebar a h3 {
     font-family: 'Inter', sans-serif;
     font-size: 16px;
@@ -138,7 +131,6 @@ body{
     transition: color 0.3s ease-in-out;
 }
 
-/* Sidebar Link Hover */
 .sidebar a:hover {
     background: var(--sidebar-background-color);
     color: var(--background-color);
@@ -148,12 +140,10 @@ body{
     color: var(--background-color);
 }
 
-/* Sidebar Icon Hover */
 .sidebar a:hover span {
     color: var(--background-color);
 }
 
-/* Container Layout */
 .container {
     display: grid;
     width: 100%;
@@ -165,22 +155,20 @@ body{
 
 aside {
     height: 100vh;
-    background: var(--card-background-color); /* White for a clean, modern look */
-    border-right: 1px solid var(--tertiary-color); /* Subtle separation */
+    background: var(--card-background-color);
+    border-right: 1px solid var(--tertiary-color);
 }
 
-/* Sidebar Top Menu */
 aside .menu {
-    background: #E8EAF6; /* Light blue-gray for a soft contrast */
+    background: #E8EAF6;
     padding: 15px;
     border-bottom: 1px solid var(--tertiary-color);
 }
 
 aside .close {
-    display:none;
+    display: none;
 }
 
-/*===== Sidebar =====*/
 aside .sidebar {
     background: white;
     display: flex;
@@ -250,7 +238,7 @@ aside .sidebar a:hover span {
     width: 100%;
     text-align: center;
     margin-top: 10px;
-    margin-bottom: 10px; /* Space between title and metrics */
+    margin-bottom: 10px;
 }
 
 .dashboard-title-text {
@@ -285,9 +273,9 @@ aside .sidebar a:hover span {
     display: flex;
     flex-wrap: wrap;
     gap: 100px;
-    justify-content: center; /* Fully centers metric cards */
+    justify-content: center;
     align-items: center;
-    max-width: 1500px; /* Keeps it from stretching too wide - will auto move the card to the next line */
+    max-width: 1500px;
     width: 100%;
 }
 
@@ -300,11 +288,11 @@ aside .sidebar a:hover span {
     box-sizing: border-box;
     border-radius: 5px;
     box-shadow: var(--card-box-shadow);
-    width: 350px; /* width of the cards */
+    width: 350px;
     height: 150px;
     font-size: 25px;
 }
-/* Each Card Styling*/
+
 .dashboard-card:first-child {
     border-left: 15px solid #246dec;
 }
@@ -329,26 +317,152 @@ aside .sidebar a:hover span {
 }
 
 .card-inner > p {
-    font-size: 25px; /* Metric Titles */
+    font-size: 25px;
 }
+
 .card-inner > span {
-    font-size: 40px;  /* Icons */
+    font-size: 40px;
 }
 
-
-/* =====Charts===== */
+/* =====Charts & Alerts Grid Layout ===== */
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 30px;
+    margin-top: 40px;
+    width: 100%;
+    max-width: 1500px;
+}
 
 .charts {
-    margin-top: 60px;
     display: flex;
-    flex-direction: row;
-    justify-content: center; /* Centers the charts horizontally */
-    gap: 40px; /* Space between the charts */
-    flex-wrap: wrap; /* Ensures responsiveness on smaller screens */
-    align-items: center;
+    flex-direction: column;
+    gap: 40px;
 }
 
+/* Alerts Container */
+.alerts-container {
+    background: var(--card-background-color);
+    border-radius: var(--card-border-radius);
+    box-shadow: var(--card-box-shadow);
+    padding: var(--card-padding);
+    height: fit-content;
+    position: sticky;
+    top: 20px;
+}
 
+.alerts-header {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.alerts-header h3 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--primary-color);
+    margin: 0;
+}
+
+.alerts-header span {
+    color: var(--failure-color);
+    font-size: 2rem;
+}
+
+.alerts-body {
+    max-height: 500px;
+    overflow-y: auto;
+    padding-right: 10px;
+}
+
+/* Alert Items */
+#low-stock-alerts .alert {
+    background: rgba(255, 159, 67, 0.1);
+    border-left: 4px solid var(--warning-color);
+    padding: 15px;
+    margin-bottom: 15px;
+    border-radius: var(--border-radius-2);
+    transition: all 0.3s ease;
+}
+
+#low-stock-alerts .alert:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+#low-stock-alerts .alert strong {
+    color: var(--failure-color);
+    display: block;
+    font-size: 1.1rem;
+    margin-bottom: 5px;
+}
+
+#low-stock-alerts .alert p {
+    margin: 5px 0;
+    font-size: 0.9rem;
+    color: var(--secondary-color);
+}
+
+/* Loading State */
+.alert-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 200px;
+    color: var(--tertiary-color);
+}
+
+.alert-loading .material-symbols-outlined {
+    font-size: 3rem;
+    margin-bottom: 15px;
+    animation: spin 1.5s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* Toastr Notifications */
+.toast-warning {
+    background-color: var(--warning-color) !important;
+    color: var(--primary-color) !important;
+    border-radius: var(--border-radius) !important;
+    box-shadow: var(--card-box-shadow) !important;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 1200px) {
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .alerts-container {
+        position: static;
+        margin-top: 40px;
+    }
+}
+
+@media (max-width: 768px) {
+    .dashboard-main-cards {
+        gap: 30px;
+    }
+    
+    .dashboard-card {
+        width: 100%;
+        max-width: 350px;
+    }
+    
+    .alerts-header h3 {
+        font-size: 1.3rem;
+    }
+}
+
+/* Existing Charts Styles */
 .charts-card {
     background-color: #FFFFFF;
     margin-bottom: 20px;

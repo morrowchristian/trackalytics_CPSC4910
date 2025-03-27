@@ -1,21 +1,30 @@
 from django.shortcuts import render, redirect
-from django.http import HttpResponse, JsonResponse
+from django.http import HttpResponse, JsonResponse, StreamingHttpResponse
 from django.contrib import messages
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.views import LoginView
 from django.urls import reverse_lazy
-from .models import Product, Inventory, InventoryHistory, ReportExport, ActivityLog
+from .models import Product, Inventory, InventoryHistory, ReportExport, ActivityLog, InventoryNotification
 from .forms import AddInventoryForm, RemoveInventoryForm, ExportForm, ProductForm, RegistrationForm
 from django.utils import timezone
 import csv
+import json
+import time
 from django.template.loader import get_template
 from xhtml2pdf import pisa
+from django.db.models import Sum, F
 
 # Dashboard View (No login required)
 def dashboard(request):
     total_inventory = Inventory.objects.count()
     low_stock_items = Inventory.objects.filter(quantity__lte=10).count()
     zero_stock_items = Inventory.objects.filter(quantity=0).count()
+    
+    # Get low stock products for SSE demo
+    low_stock_products = Product.objects.annotate(
+        total_quantity=Sum('inventory__quantity')
+    ).filter(total_quantity__lt=F('low_stock_threshold'))
+    
     # Log action only if user is authenticated
     if request.user.is_authenticated:
         ActivityLog.objects.create(user=request.user, action='Viewed dashboard')
@@ -24,8 +33,60 @@ def dashboard(request):
         'total_inventory': total_inventory,
         'low_stock_items': low_stock_items,
         'zero_stock_items': zero_stock_items,
+        'low_stock_products': low_stock_products,
     }
     return render(request, 'dashboard.html', context)
+
+# Inventory Stream View for SSE
+def inventory_stream(request):
+    def event_stream():
+        last_checked = time.time()
+        while True:
+            # Check for new low stock items every 5 seconds
+            if time.time() - last_checked > 5:
+                last_checked = time.time()
+                
+                # Get low stock products
+                low_stock_products = Product.objects.annotate(
+                    total_quantity=Sum('inventory__quantity')
+                ).filter(
+                    total_quantity__lt=F('low_stock_threshold')
+                ).values('id', 'product_name', 'total_quantity', 'low_stock_threshold')
+                
+                # Get unread notifications for authenticated users
+                notifications = []
+                if request.user.is_authenticated:
+                    notifications = InventoryNotification.objects.filter(
+                        is_read=False,
+                        recipients=request.user
+                    ).order_by('-created_at')[:5].values('id', 'message')
+                
+                yield f"data: {json.dumps({
+                    'low_stock': list(low_stock_products),
+                    'notifications': list(notifications),
+                    'timestamp': time.time()
+                })}\n\n"
+            
+            time.sleep(1)
+    
+    response = StreamingHttpResponse(event_stream(), content_type='text/event-stream')
+    response['Cache-Control'] = 'no-cache'
+    return response
+
+# Mark notification as read
+def mark_notification_read(request, notification_id):
+    if request.user.is_authenticated:
+        try:
+            notification = InventoryNotification.objects.get(
+                id=notification_id,
+                recipients=request.user
+            )
+            notification.is_read = True
+            notification.save()
+            return JsonResponse({'success': True})
+        except InventoryNotification.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'Notification not found'}, status=404)
+    return JsonResponse({'success': False, 'error': 'Authentication required'}, status=403)
 
 # Inventory View (No login required)
 def inventory(request):
@@ -37,6 +98,20 @@ def inventory(request):
         if 'add_inventory' in request.POST and add_form.is_valid():
             instance = add_form.save()
             InventoryHistory.objects.create(inventory=instance, action='received', quantity=instance.quantity)
+            
+            # Check for low stock after adding inventory
+            product = instance.product
+            if product.is_low_stock():
+                notification = InventoryNotification.objects.create(
+                    product=product,
+                    notification_type='low_stock',
+                    message=f'Low stock alert for {product.product_name}. Current quantity: {product.total_quantity}'
+                )
+                # Add appropriate recipients (e.g., managers)
+                managers = request.user.groups.filter(name='Inventory Managers').first()
+                if managers:
+                    notification.recipients.set(managers.user_set.all())
+            
             if request.user.is_authenticated:
                 ActivityLog.objects.create(user=request.user, action='Added inventory')
             messages.success(request, 'Inventory item added successfully!')
@@ -46,25 +121,48 @@ def inventory(request):
             product = remove_form.cleaned_data['product']
             quantity = remove_form.cleaned_data['quantity']
             inventory_item = Inventory.objects.filter(product=product).first()
+            
             if inventory_item:
                 inventory_item.quantity -= quantity
                 inventory_item.save()
                 InventoryHistory.objects.create(inventory=inventory_item, action='sold', quantity=quantity)
+                
+                # Check for low stock after removing inventory
+                if product.is_low_stock():
+                    notification = InventoryNotification.objects.create(
+                        product=product,
+                        notification_type='low_stock',
+                        message=f'Low stock alert for {product.product_name}. Current quantity: {product.total_quantity}'
+                    )
+                    # Add appropriate recipients
+                    managers = request.user.groups.filter(name='Inventory Managers').first()
+                    if managers:
+                        notification.recipients.set(managers.user_set.all())
+                
                 if request.user.is_authenticated:
                     ActivityLog.objects.create(user=request.user, action='Removed inventory')
+                
                 return JsonResponse({
                     'success': True,
-                    'inventory': list(Inventory.objects.values('product__product_name', 'quantity'))
+                    'inventory': list(Inventory.objects.values('product__product_name', 'quantity')),
+                    'low_stock': product.is_low_stock()
                 })
             else:
                 return JsonResponse({'success': False, 'error': 'Inventory item not found'})
     
     if request.method == 'GET' and request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        inventory_data = list(Inventory.objects.values('product__product_name', 'quantity'))
+        low_stock = list(Product.objects.annotate(
+            total_quantity=Sum('inventory__quantity')
+        ).filter(
+            total_quantity__lt=F('low_stock_threshold')
+        ).values('id', 'product_name', 'total_quantity', 'low_stock_threshold'))
+        
         return JsonResponse({
-            'inventory': list(Inventory.objects.values('problem__product_name', 'quantity'))
+            'inventory': inventory_data,
+            'low_stock': low_stock
         })
     
-    import json
     products_json = json.dumps([{'id': p.id, 'product_name': p.product_name} for p in products])
     context = {
         'add_form': add_form,

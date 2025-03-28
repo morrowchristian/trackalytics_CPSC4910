@@ -2,98 +2,87 @@
 {% extends 'base.html' %}
 {% load static %}
 
+{% block title %}Inventory Management - Trackalytics{% endblock %}
+
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/inventory.css' %}">
 {% endblock %}
 
 {% block content %}
-<div class="inventory-container">
-    <h2>Inventory Management</h2>
-    <div class="inventory-nav">
-        <button id="addInventoryBtn">Add Inventory</button>
-        <button id="removeInventoryBtn">Remove Inventory</button>
-        <button id="viewInventoryBtn">View Inventory</button>
+<main class="inventory-container">
+    <div class="inventory-header">
+        <h1>Inventory Management</h1>
+        <div class="inventory-actions">
+            <button id="addInventoryBtn" class="btn-primary">
+                <span class="material-symbols-outlined">add</span> Add Inventory
+            </button>
+            <button id="removeInventoryBtn" class="btn-secondary">
+                <span class="material-symbols-outlined">remove</span> Remove Inventory
+            </button>
+            <button id="viewInventoryBtn" class="btn-tertiary">
+                <span class="material-symbols-outlined">visibility</span> View Inventory
+            </button>
+        </div>
     </div>
 
-    <div id="contentArea">
-        <!-- Initial content will be populated by JS -->
-    </div>
+    <div class="inventory-content">
+        <div id="formContainer" class="form-container card">
+            <!-- Dynamic form content will be loaded here -->
+        </div>
 
-    <div id="viewInventorySection" class="inventory-section" style="display: none;">
-        <h3>View Inventory</h3>
-        <table id="inventoryTable" class="inventory-table">
-            <thead>
-                <tr>
-                    <th>Product</th>
-                    <th>Quantity</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for item in inventory %}
-                <tr>
-                    <td>{{ item.product.product_name }}</td>
-                    <td>{{ item.quantity }}</td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="2">No inventory items available.</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+        <div id="viewInventorySection" class="inventory-table-container card">
+            <h2>Current Inventory</h2>
+            <div class="table-responsive">
+                <table id="inventoryTable" class="inventory-table">
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th>Quantity</th>
+                            <th>Last Updated</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in inventory %}
+                        <tr>
+                            <td>{{ item.product.product_name }}</td>
+                            <td>{{ item.quantity }}</td>
+                            <td>{{ item.updated_at|date:"M d, Y H:i" }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="3" class="empty-table">No inventory items available</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
-</div>
+</main>
+{% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'js/addinventory.js' %}"></script>
-<script src="{% static 'js/removeinventory.js' %}"></script>
-<script src="{% static 'js/viewinventory.js' %}"></script>
 <script>
-    // Log the raw products_json to debug
-    console.log("Raw products_json:", "{{ products_json|safe }}");
-
-    // Assign products with a fallback
-    const products = {{ products_json|default:'[]'|safe }};
-    console.log("Parsed products:", products);
-
-    const csrfToken = "{{ csrf_token|default:'' }}";
-
-    document.getElementById('addInventoryBtn').addEventListener('click', function() {
-        renderAddInventoryForm(products);
-        document.getElementById('contentArea').style.display = 'block';
-        document.getElementById('viewInventorySection').style.display = 'none';
-    });
-
-    document.getElementById('removeInventoryBtn').addEventListener('click', function() {
-        document.getElementById('contentArea').innerHTML = `
-            <div class="inventory-form card">
-                <h2>Remove Inventory Item</h2>
-                <form id="removeInventoryForm" method="POST" action="/inventory/">
-                    <input type="hidden" name="csrfmiddlewaretoken" value="${csrfToken}">
-                    <input type="hidden" name="remove_inventory" value="true">
-                    <div class="form-group">
-                        <label for="product">Product</label>
-                        <select id="product" name="product" required>
-                            ${products.map(p => `<option value="${p.id}">${p.product_name}</option>`).join('')}
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="quantity">Quantity</label>
-                        <input type="number" id="quantity" name="quantity" required>
-                    </div>
-                    <button type="submit" class="btn-primary">Remove Item</button>
-                </form>
-            </div>
-        `;
-        document.getElementById('contentArea').style.display = 'block';
-        document.getElementById('viewInventorySection').style.display = 'none';
-    });
-
-    document.getElementById('viewInventoryBtn').addEventListener('click', function() {
-        document.getElementById('contentArea').style.display = 'none';
-        document.getElementById('viewInventorySection').style.display = 'block';
-        updateInventoryTable();
+    document.addEventListener('DOMContentLoaded', function() {
+        const products = JSON.parse('{{ products_json|escapejs }}');
+        const csrfToken = "{{ csrf_token }}";
+        
+        // Initialize inventory management
+        document.getElementById('addInventoryBtn').addEventListener('click', function() {
+            renderAddInventoryForm(products, csrfToken);
+        });
+        
+        document.getElementById('removeInventoryBtn').addEventListener('click', function() {
+            renderRemoveInventoryForm(products, csrfToken);
+        });
+        
+        document.getElementById('viewInventoryBtn').addEventListener('click', function() {
+            toggleInventoryView();
+        });
+        
+        // Initial state
+        toggleInventoryView();
     });
 </script>
-{% endblock %}
+<script src="{% static 'js/inventory.js' %}"></script>
 {% endblock %}
